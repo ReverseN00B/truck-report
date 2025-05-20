@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shipping Truck Status Logger</title>
+<style>
+  /* Reset and base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f6f8; color: #333;
+    display: flex; justify-content: center; align-items: flex-start;
+    min-height: 100vh; padding: 2rem;
+  }
+  #app {
+    max-width: 700px; width: 100%;
+    background: white; border-radius: 12px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.1);
+    padding: 2rem 2.5rem 3rem;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  h1 {
+    font-weight: 700; font-size: 1.5rem; color: #222;
+  }
+  nav button {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-left: 0.5rem;
+    color: #444;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  nav button.active, nav button:hover {
+    background-color: #1976d2;
+    color: white;
+  }
+
+  section {
+    display: none;
+  }
+  section.active {
+    display: block;
+  }
+
+  /* Admin view */
+  #admin-section label, #driver-section label {
+    font-weight: 600;
+    display: block;
+    margin: 0.5rem 0 0.2rem;
+    color: #555;
+  }
+  #admin-section input[type="text"],
+  #admin-section input[type="datetime-local"],
+  #driver-section input[type="datetime-local"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline-offset: 2px;
+    outline-color: #1976d2;
+  }
+  #admin-section select {
+    width: 100%;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+    outline-offset: 2px;
+    outline-color: #1976d2;
+  }
+
+  button.btn {
+    display: inline-block;
+    background-color: #1976d2;
+    color: white;
+    font-weight: 700;
+    padding: 0.6rem 1.1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    margin-top: 1rem;
+    transition: background-color 0.3s ease;
+  }
+  button.btn:hover:enabled {
+    background-color: #0d47a1;
+  }
+  button:disabled, button.btn:disabled {
+    background-color: #888 !important;
+    cursor: not-allowed;
+  }
+  button.btn.delete-btn {
+    background-color: #d32f2f;
+    margin-left: 0.5rem;
+  }
+  button.btn.delete-btn:hover:enabled {
+    background-color: #9a0007;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  table thead {
+    background-color: #1976d2;
+    color: white;
+  }
+  table th, table td {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #ddd;
+    text-align: center;
+  }
+  table tbody tr:nth-child(even) {
+    background-color: #f5faff;
+  }
+
+  /* Driver section */
+  #driver-info p {
+    margin: 0.3rem 0;
+    font-weight: 600;
+  }
+  #log-times input {
+    margin-bottom: 1rem;
+  }
+  #message-box {
+    margin-top: 1rem;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 8px;
+    padding: 1rem;
+    white-space: pre-wrap;
+    font-family: Consolas, monospace;
+    font-size: 0.9rem;
+    color: #0d47a1;
+  }
+  #whatsapp-send-link {
+    margin-top: 1rem;
+  }
+  #whatsapp-send-link a {
+    display: inline-block;
+    text-decoration: none;
+    background-color: #25D366;
+    color: white;
+    padding: 0.7rem 1.2rem;
+    font-weight: 700;
+    border-radius: 8px;
+    transition: background-color 0.25s ease;
+  }
+  #whatsapp-send-link a:hover {
+    background-color: #128C7E;
+  }
+
+  /* New report button styling */
+  #btn-generate-selected-report {
+    margin-top: 1rem;
+    background-color: #00796b;
+  }
+  #btn-generate-selected-report:hover:enabled {
+    background-color: #004d40;
+  }
+
+  /* Delay reasons selection style */
+  #admin-delay-reason-section {
+    margin-top: 1rem;
+  }
+  #admin-delay-reason-section label {
+    margin-right: 1rem;
+    cursor: pointer;
+  }
+  #admin-delay-reason-section input[type="checkbox"] {
+    margin-right: 0.25rem;
+  }
+  #delay-reason-list {
+    margin-top: 0.5rem;
+    max-height: 120px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+  #delay-reason-list label {
+    display: block;
+    padding: 0.2rem 0;
+    cursor: pointer;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    #app {
+      padding: 1.5rem 1rem 2rem;
+    }
+    nav button {
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Shipping Truck Status Logger</h1>
+    <nav>
+      <button id="btn-admin" class="active" aria-selected="true" type="button">Admin View</button>
+      <button id="btn-driver" type="button">Driver View</button>
+    </nav>
+  </header>
+
+  <!-- Admin Section -->
+  <section id="admin-section" class="active" aria-label="Admin View">
+    <h2>Manage Truck Appointment & Delays</h2>
+
+    <form id="form-add-truck">
+      <label for="truck-id">Truck ID / Driver Name</label>
+      <input type="text" id="truck-id" autocomplete="off" required placeholder="E.g., Truck #23 or John Doe" />
+      
+      <label for="appointment-time">Appointment Time</label>
+      <input type="datetime-local" id="appointment-time" required />
+      
+      <label for="actual-arrival-time">Actual Arrival</label>
+      <input type="datetime-local" id="actual-arrival-time" required />
+      
+      <button type="submit" class="btn">Add / Update Truck Info</button>
+    </form>
+
+    <div id="admin-delay-reason-section">
+      <h3>Delay Reasons</h3>
+      <form id="form-delay-reasons">
+        <input type="text" id="new-delay-reason" placeholder="Add new delay reason" autocomplete="off" />
+        <button type="submit" class="btn" style="margin-top:0.4rem;">Add Reason</button>
+      </form>
+      <div id="delay-reason-list" aria-label="List of delay reasons">
+        <!-- Delay reasons checkboxes will be here -->
+      </div>
+    </div>
+
+    <h3>Trucks & Delay Assignments</h3>
+    <table id="trucks-table" aria-label="Trucks status table">
+      <thead>
+        <tr>
+          <th>Truck / Driver</th>
+          <th>Appointment Time</th>
+          <th>Actual Arrival</th>
+          <th>Delay Reasons</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Truck rows added dynamically -->
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Driver Section -->
+  <section id="driver-section" aria-label="Driver View">
+    <h2>Driver Log In / Log Out</h2>
+
+    <label for="driver-truck-select">Select Your Truck / Driver Name</label>
+    <select id="driver-truck-select" aria-required="true">
+      <option value="" disabled selected>-- Select your truck/driver --</option>
+    </select>
+
+    <div id="driver-info" aria-live="polite" aria-atomic="true" style="margin-top:1rem;">
+      <p><strong>Appointment Time:</strong> <span id="display-appointment-time">-</span></p>
+      <p><strong>Actual Arrival:</strong> <span id="display-actual-arrival">-</span></p>
+      <p><strong>In Time (Logged Arrival):</strong> <span id="display-arrival-time">-</span></p>
+      <p><strong>Departure Time (Logged Logout):</strong> <span id="display-departure-time">-</span></p>
+      <p><strong>Delay Reasons Assigned:</strong> <span id="display-delay-reasons">None</span></p>
+    </div>
+
+    <div id="log-times" style="margin-top:1rem;">
+      <button id="btn-log-arrival" class="btn" type="button" disabled>Log Arrival Time</button>
+      <button id="btn-log-departure" class="btn" type="button" disabled>Log Departure Time</button>
+    </div>
+
+    <div id="message-box" hidden></div>
+    <div id="whatsapp-send-link" hidden>
+      <a href="#" target="_blank" rel="noopener" id="whatsapp-link" aria-label="Send report on WhatsApp">Send Report to WhatsApp Group</a>
+    </div>
+    <button id="btn-generate-selected-report" class="btn" type="button" title="Generate WhatsApp report for selected truck">Generate WhatsApp Report for Selected Truck</button>
+  </section>
+</div>
+
+<script>
+(() => {
+  // Storage keys
+  const STORAGE_TRUCKS = 'truck_shipping_trucks';
+  const STORAGE_DELAY_REASONS = 'truck_shipping_delay_reasons';
+
+  // Elements
+  const btnAdmin = document.getElementById('btn-admin');
+  const btnDriver = document.getElementById('btn-driver');
+  const adminSection = document.getElementById('admin-section');
+  const driverSection = document.getElementById('driver-section');
+
+  // Admin form elements
+  const formAddTruck = document.getElementById('form-add-truck');
+  const inputTruckId = document.getElementById('truck-id');
+  const inputAppointmentTime = document.getElementById('appointment-time');
+  const inputActualArrivalTime = document.getElementById('actual-arrival-time');
+  const delayReasonList = document.getElementById('delay-reason-list');
+  const formDelayReasons = document.getElementById('form-delay-reasons');
+  const inputNewDelayReason = document.getElementById('new-delay-reason');
+  const trucksTableBody = document.querySelector('#trucks-table tbody');
+
+  // Driver elements
+  const driverTruckSelect = document.getElementById('driver-truck-select');
+  const displayAppointmentTime = document.getElementById('display-appointment-time');
+  const displayActualArrival = document.getElementById('display-actual-arrival');
+  const displayArrivalTime = document.getElementById('display-arrival-time');
+  const displayDepartureTime = document.getElementById('display-departure-time');
+  const displayDelayReasons = document.getElementById('display-delay-reasons');
+  const btnLogArrival = document.getElementById('btn-log-arrival');
+  const btnLogDeparture = document.getElementById('btn-log-departure');
+  const messageBox = document.getElementById('message-box');
+  const whatsappSendDiv = document.getElementById('whatsapp-send-link');
+  const whatsappLink = document.getElementById('whatsapp-link');
+  const btnGenerateSelectedReport = document.getElementById('btn-generate-selected-report');
+
+  // Application data
+  let trucks = [];
+  let delayReasons = [];
+
+  // Load data from localStorage
+  function loadFromStorage() {
+    try {
+      trucks = JSON.parse(localStorage.getItem(STORAGE_TRUCKS)) || [];
+      delayReasons = JSON.parse(localStorage.getItem(STORAGE_DELAY_REASONS)) || [];
+    } catch (e) {
+      trucks = [];
+      delayReasons = [];
+    }
+  }
+
+  // Save data to localStorage
+  function saveToStorage() {
+    localStorage.setItem(STORAGE_TRUCKS, JSON.stringify(trucks));
+    localStorage.setItem(STORAGE_DELAY_REASONS, JSON.stringify(delayReasons));
+  }
+
+  // Format date-time for display
+  function formatDateTimeLocal(date) {
+    if (!date) return '-';
+    const dt = new Date(date);
+    if (isNaN(dt)) return '-';
+    return dt.toLocaleString(undefined, {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  // Render trucks table with edit and delete buttons
+  function renderTrucksTable() {
+    trucksTableBody.innerHTML = '';
+    trucks.forEach((truck, idx) => {
+      const tr = document.createElement('tr');
+
+      const idTd = document.createElement('td');
+      idTd.textContent = truck.id;
+
+      const appTimeTd = document.createElement('td');
+      appTimeTd.textContent = formatDateTimeLocal(truck.appointmentTime);
+
+      const actualArrivalTd = document.createElement('td');
+      actualArrivalTd.textContent = formatDateTimeLocal(truck.actualArrival);
+
+      const delayTd = document.createElement('td');
+      delayTd.textContent = (truck.delayReasons && truck.delayReasons.length > 0) ? truck.delayReasons.join(', ') : 'None';
+
+      const actionsTd = document.createElement('td');
+
+      // Edit Delay button
+      const btnEditDelay = document.createElement('button');
+      btnEditDelay.type = 'button';
+      btnEditDelay.className = 'btn';
+      btnEditDelay.textContent = 'Edit Delay Reasons';
+      btnEditDelay.onclick = () => openDelaySelector(idx);
+      actionsTd.appendChild(btnEditDelay);
+
+      // Delete button
+      const btnDelete = document.createElement('button');
+      btnDelete.type = 'button';
+      btnDelete.className = 'btn delete-btn';
+      btnDelete.textContent = 'Delete';
+      btnDelete.onclick = () => {
+        if (confirm(`Are you sure you want to delete truck "${truck.id}"? This action cannot be undone.`)) {
+          trucks.splice(idx, 1);
+          saveToStorage();
+          renderTrucksTable();
+          populateDriverSelect();
+          resetDriverDisplay();
+        }
+      };
+      actionsTd.appendChild(btnDelete);
+
+      tr.appendChild(idTd);
+      tr.appendChild(appTimeTd);
+      tr.appendChild(actualArrivalTd);
+      tr.appendChild(delayTd);
+      tr.appendChild(actionsTd);
+
+      trucksTableBody.appendChild(tr);
+    });
+  }
+
+  // Reset driver display info
+  function resetDriverDisplay() {
+    displayAppointmentTime.textContent = '-';
+    displayActualArrival.textContent = '-';
+    displayArrivalTime.textContent = '-';
+    displayDepartureTime.textContent = '-';
+    displayDelayReasons.textContent = 'None';
+    btnLogArrival.disabled = true;
+    btnLogDeparture.disabled = true;
+    messageBox.hidden = true;
+    whatsappSendDiv.hidden = true;
+    whatsappLink.href = '#';
+  }
+
+  // Update driver info display
+  function updateDriverInfo(truck) {
+    displayAppointmentTime.textContent = formatDateTimeLocal(truck.appointmentTime);
+    displayActualArrival.textContent = formatDateTimeLocal(truck.actualArrival);
+    displayArrivalTime.textContent = truck.arrivalTime ? formatDateTimeLocal(truck.arrivalTime) : '-';
+    displayDepartureTime.textContent = truck.departureTime ? formatDateTimeLocal(truck.departureTime) : '-';
+    displayDelayReasons.textContent = (truck.delayReasons && truck.delayReasons.length > 0) ? truck.delayReasons.join(', ') : 'None';
+
+    btnLogArrival.disabled = !!truck.arrivalTime;
+    btnLogDeparture.disabled = !(truck.arrivalTime && !truck.departureTime);
+  }
+
+  // Generate WhatsApp report message
+  function generateReportMessage(truck) {
+    let msg = `Truck Status Report for ${truck.id}\n`;
+    msg += `Appointment Time: ${formatDateTimeLocal(truck.appointmentTime)}\n`;
+    msg += `Actual Arrival: ${formatDateTimeLocal(truck.actualArrival)}\n`;
+    msg += `In Time: ${truck.arrivalTime ? formatDateTimeLocal(truck.arrivalTime) : '-'}\n`;
+    msg += `Departure Time: ${truck.departureTime ? formatDateTimeLocal(truck.departureTime) : '-'}\n`;
+
+    if (truck.actualArrival && truck.arrivalTime) {
+      const waitMins = Math.round((new Date(truck.arrivalTime) - new Date(truck.actualArrival)) / 60000);
+      msg += `Waiting for dock: ${waitMins >= 0 ? waitMins : 0} minute${waitMins === 1 ? '' : 's'}\n`;
+    } else {
+      msg += `Waiting for dock: -\n`;
+    }
+
+    if (truck.arrivalTime && truck.departureTime) {
+      const serviceMins = Math.round((new Date(truck.departureTime) - new Date(truck.arrivalTime)) / 60000);
+      msg += `Service time: ${serviceMins >= 0 ? serviceMins : 0} minute${serviceMins === 1 ? '' : 's'}\n`;
+    } else {
+      msg += `Service time: -\n`;
+    }
+
+    msg += `Delay Reasons: ${truck.delayReasons && truck.delayReasons.length > 0 ? truck.delayReasons.join(', ') : 'None'}`;
+
+    return msg;
+  }
+
+  // Populate driver select dropdown
+  function populateDriverSelect() {
+    driverTruckSelect.innerHTML = '<option value="" disabled selected>-- Select your truck/driver --</option>';
+    trucks.forEach(truck => {
+      const option = document.createElement('option');
+      option.value = truck.id;
+      option.textContent = truck.id;
+      driverTruckSelect.appendChild(option);
+    });
+  }
+
+  // Event handlers and initializations
+
+  // Edit delay reasons modal
+  function openDelaySelector(truckIndex) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = 0; overlay.style.left = 0; overlay.style.right = 0; overlay.style.bottom = 0;
+    overlay.style.backgroundColor = 'rgba(0,0,0,0.35)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = 1000;
+
+    const modal = document.createElement('div');
+    modal.style.background = 'white';
+    modal.style.padding = '1.5rem';
+    modal.style.borderRadius = '12px';
+    modal.style.maxWidth = '350px';
+    modal.style.width = '90%';
+    modal.style.maxHeight = '90vh';
+    modal.style.overflowY = 'auto';
+    modal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+
+    const title = document.createElement('h3');
+    title.textContent = `Select Delay Reasons for ${trucks[truckIndex].id}`;
+    modal.appendChild(title);
+
+    const form = document.createElement('form');
+    delayReasons.forEach(reason => {
+      const label = document.createElement('label');
+      label.style.display = 'block';
+      label.style.marginBottom = '0.4rem';
+      label.style.cursor = 'pointer';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'delayReason';
+      checkbox.value = reason;
+      checkbox.style.marginRight = '0.4rem';
+      if (trucks[truckIndex].delayReasons && trucks[truckIndex].delayReasons.includes(reason)) {
+        checkbox.checked = true;
+      }
+
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(reason));
+      form.appendChild(label);
+    });
+
+    const btnSubmit = document.createElement('button');
+    btnSubmit.type = 'submit';
+    btnSubmit.className = 'btn';
+    btnSubmit.textContent = 'Save';
+    btnSubmit.style.marginTop = '1rem';
+    btnSubmit.style.marginRight = '1rem';
+
+    const btnCancel = document.createElement('button');
+    btnCancel.type = 'button';
+    btnCancel.className = 'btn';
+    btnCancel.textContent = 'Cancel';
+    btnCancel.style.backgroundColor = '#777';
+
+    const btnContainer = document.createElement('div');
+    btnContainer.style.marginTop = '0.8rem';
+    btnContainer.appendChild(btnSubmit);
+    btnContainer.appendChild(btnCancel);
+
+    form.appendChild(btnContainer);
+    modal.appendChild(form);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    btnCancel.onclick = () => {
+      document.body.removeChild(overlay);
+    };
+
+    form.onsubmit = e => {
+      e.preventDefault();
+      const checkedReasons = [...form.elements['delayReason']]
+        .filter(input => input.checked)
+        .map(input => input.value);
+      trucks[truckIndex].delayReasons = checkedReasons;
+      saveToStorage();
+      renderTrucksTable();
+      populateDriverSelect();
+      document.body.removeChild(overlay);
+    };
+  }
+
+  btnAdmin.addEventListener('click', () => {
+    btnAdmin.classList.add('active');
+    btnAdmin.setAttribute('aria-selected', 'true');
+    btnDriver.classList.remove('active');
+    btnDriver.setAttribute('aria-selected', 'false');
+    adminSection.classList.add('active');
+    driverSection.classList.remove('active');
+  });
+
+  btnDriver.addEventListener('click', () => {
+    btnDriver.classList.add('active');
+    btnDriver.setAttribute('aria-selected', 'true');
+    btnAdmin.classList.remove('active');
+    btnAdmin.setAttribute('aria-selected', 'false');
+    driverSection.classList.add('active');
+    adminSection.classList.remove('active');
+    resetDriverDisplay();
+    populateDriverSelect();
+  });
+
+  formAddTruck.addEventListener('submit', e => {
+    e.preventDefault();
+    const id = inputTruckId.value.trim();
+    const appointmentTimeVal = inputAppointmentTime.value;
+    const actualArrivalVal = inputActualArrivalTime.value;
+
+    if (!id || !appointmentTimeVal || !actualArrivalVal) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    const idx = trucks.findIndex(t => t.id.toLowerCase() === id.toLowerCase());
+    if (idx >= 0) {
+      trucks[idx].appointmentTime = appointmentTimeVal;
+      trucks[idx].actualArrival = actualArrivalVal;
+    } else {
+      trucks.push({
+        id,
+        appointmentTime: appointmentTimeVal,
+        actualArrival: actualArrivalVal,
+        delayReasons: [],
+        arrivalTime: null,
+        departureTime: null,
+      });
+    }
+    saveToStorage();
+    renderTrucksTable();
+    populateDriverSelect();
+
+    inputTruckId.value = '';
+    inputAppointmentTime.value = '';
+    inputActualArrivalTime.value = '';
+  });
+
+  formDelayReasons.addEventListener('submit', e => {
+    e.preventDefault();
+    const newReason = inputNewDelayReason.value.trim();
+    if (!newReason) {
+      alert('Please enter a delay reason.');
+      return;
+    }
+    if (delayReasons.includes(newReason)) {
+      alert('Reason already exists.');
+      return;
+    }
+    delayReasons.push(newReason);
+    saveToStorage();
+    renderDelayReasonsList();
+    inputNewDelayReason.value = '';
+  });
+
+  driverTruckSelect.addEventListener('change', e => {
+    const truckId = e.target.value;
+    if (!truckId) {
+      resetDriverDisplay();
+      return;
+    }
+    const truck = trucks.find(t => t.id === truckId);
+    if (truck) updateDriverInfo(truck);
+  });
+
+  btnLogArrival.addEventListener('click', () => {
+    const truckId = driverTruckSelect.value;
+    if (!truckId) return;
+    const truck = trucks.find(t => t.id === truckId);
+    if (!truck) return;
+
+    truck.arrivalTime = new Date().toISOString();
+    saveToStorage();
+    updateDriverInfo(truck);
+  });
+
+  btnLogDeparture.addEventListener('click', () => {
+    const truckId = driverTruckSelect.value;
+    if (!truckId) return;
+    const truck = trucks.find(t => t.id === truckId);
+    if (!truck) return;
+
+    truck.departureTime = new Date().toISOString();
+    saveToStorage();
+    updateDriverInfo(truck);
+
+    const msg = generateReportMessage(truck);
+    messageBox.textContent = msg;
+    messageBox.hidden = false;
+    whatsappLink.href = createWhatsAppLink(msg);
+    whatsappSendDiv.hidden = false;
+  });
+
+  btnGenerateSelectedReport.addEventListener('click', () => {
+    const truckId = driverTruckSelect.value;
+    if (!truckId) {
+      alert('Please select a truck/driver from the dropdown.');
+      return;
+    }
+    const truck = trucks.find(t => t.id === truckId);
+    if (!truck) {
+      alert('Selected truck not found.');
+      return;
+    }
+    const msg = generateReportMessage(truck);
+    messageBox.textContent = msg;
+    messageBox.hidden = false;
+    whatsappLink.href = createWhatsAppLink(msg);
+    whatsappSendDiv.hidden = false;
+  });
+
+  // Initialize app
+  loadFromStorage();
+  renderDelayReasonsList();
+  renderTrucksTable();
+  populateDriverSelect();
+  btnAdmin.click();
+
+})();
+</script>
+</body>
+</html>
